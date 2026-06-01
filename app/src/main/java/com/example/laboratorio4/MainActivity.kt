@@ -1,20 +1,113 @@
 package com.example.laboratorio4
 
 import android.os.Bundle
-import androidx.activity.enableEdgeToEdge
+import android.widget.Button
+import android.widget.EditText
+import android.widget.RadioButton
+import android.widget.RadioGroup
+import android.widget.Switch
+import android.widget.Toast
+import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.view.ViewCompat
-import androidx.core.view.WindowInsetsCompat
-
+import androidx.lifecycle.lifecycleScope
+import com.example.laboratorio4.viewmodel.PerfilViewModel
+import kotlinx.coroutines.launch
+import androidx.appcompat.app.AppCompatDelegate
 class MainActivity : AppCompatActivity() {
+
+    private lateinit var etNombre: EditText
+    private lateinit var etCorreo: EditText
+    private lateinit var rgTema: RadioGroup
+    private lateinit var rbClaro: RadioButton
+    private lateinit var rbOscuro: RadioButton
+    private lateinit var swNotificaciones: Switch
+    private lateinit var btnGuardar: Button
+
+    private val perfilViewModel: PerfilViewModel by viewModels()
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
         setContentView(R.layout.activity_main)
-        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main)) { v, insets ->
-            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
-            insets
+
+        inicializarVistas()
+        observarPerfil()
+
+        btnGuardar.setOnClickListener {
+            guardarPerfil()
         }
+    }
+
+    private fun aplicarTema(tema: String) {
+        if (tema == "Oscuro") {
+            AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES)
+        } else {
+            AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO)
+        }
+    }
+
+    private fun inicializarVistas() {
+        etNombre = findViewById(R.id.etNombre)
+        etCorreo = findViewById(R.id.etCorreo)
+        rgTema = findViewById(R.id.rgTema)
+        rbClaro = findViewById(R.id.rbClaro)
+        rbOscuro = findViewById(R.id.rbOscuro)
+        swNotificaciones = findViewById(R.id.swNotificaciones)
+        btnGuardar = findViewById(R.id.btnGuardar)
+    }
+
+    private fun observarPerfil() {
+        lifecycleScope.launch {
+            perfilViewModel.perfil.collect { perfil ->
+
+                etNombre.setText(perfil.nombre)
+                etCorreo.setText(perfil.correo)
+
+                if (perfil.tema == "Oscuro") {
+                    rbOscuro.isChecked = true
+                } else {
+                    rbClaro.isChecked = true
+                }
+
+                swNotificaciones.isChecked = perfil.notificaciones
+
+                aplicarTema(perfil.tema)
+            }
+        }
+    }
+    private fun guardarPerfil() {
+        val nombre = etNombre.text.toString().trim()
+        val correo = etCorreo.text.toString().trim()
+
+        if (nombre.isEmpty()) {
+            etNombre.error = "Ingrese su nombre"
+            return
+        }
+
+        if (correo.isEmpty()) {
+            etCorreo.error = "Ingrese su correo"
+            return
+        }
+
+        val tema = when (rgTema.checkedRadioButtonId) {
+            R.id.rbOscuro -> "Oscuro"
+            else -> "Claro"
+        }
+
+        val notificaciones = swNotificaciones.isChecked
+
+        perfilViewModel.guardarPerfil(
+            nombre = nombre,
+            correo = correo,
+            tema = tema,
+            notificaciones = notificaciones
+        )
+
+        aplicarTema(tema)
+
+        Toast.makeText(
+            this,
+            "Perfil guardado correctamente",
+            Toast.LENGTH_SHORT
+        ).show()
     }
 }
